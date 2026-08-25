@@ -9,12 +9,26 @@ export interface ApiKeyItem {
 }
 
 export const getStoredApiKeys = (): string[] => {
+  // Always prioritize environment key provided by the platform
+  const envKey =
+    (process as any).env?.GEMINI_API_KEY ||
+    (process as any).env?.API_KEY ||
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    '';
+
+  if (envKey && envKey.trim()) {
+    return [envKey.trim()];
+  }
+
   try {
     const raw = localStorage.getItem(API_KEYS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((item: string | ApiKeyItem) => (typeof item === 'string' ? item : item.key)).filter(Boolean);
+        const list = parsed
+          .map((item: string | ApiKeyItem) => (typeof item === 'string' ? item : item.key))
+          .filter(Boolean);
+        if (list.length > 0) return list;
       }
     }
   } catch (err) {
@@ -23,13 +37,11 @@ export const getStoredApiKeys = (): string[] => {
 
   // Fallback to legacy single key if present
   const legacyKey = localStorage.getItem(LEGACY_KEY_STORAGE_KEY);
-  if (legacyKey) {
-    return [legacyKey];
+  if (legacyKey && legacyKey.trim()) {
+    return [legacyKey.trim()];
   }
 
-  // Fallback to environment key if set
-  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY || '';
-  return envKey ? [envKey] : [];
+  return [];
 };
 
 export const saveApiKeys = (keys: string[]): void => {
@@ -56,8 +68,12 @@ export const removeApiKey = (keyToRemove: string): void => {
 };
 
 export const clearAllApiKeys = (): void => {
-  localStorage.removeItem(API_KEYS_STORAGE_KEY);
-  localStorage.removeItem(LEGACY_KEY_STORAGE_KEY);
+  try {
+    localStorage.removeItem(API_KEYS_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_KEY_STORAGE_KEY);
+  } catch (e) {
+    // Ignore in SSR / restricted storage
+  }
 };
 
 export const getStoredApiKey = (): string => {

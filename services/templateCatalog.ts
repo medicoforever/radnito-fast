@@ -1,4 +1,4 @@
-﻿import rawTemplatesData from './templatesData.json';
+import rawTemplatesData from '../public/templatesData.json';
 
 export interface RadiologyDocxTemplate {
   id: string;

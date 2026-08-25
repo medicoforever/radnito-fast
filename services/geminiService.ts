@@ -10,7 +10,7 @@ import { isRAGStyleMatchingEnabled, getRelevantStyleTemplates, augmentPromptWith
 export const getAiClient = (lastFailedKey?: string) => {
   const keys = getStoredApiKeys();
   if (keys.length === 0) {
-    throw new Error("No Gemini API Key found. Please click 'Set API Key' in the top bar or check our Free API Key Guide.");
+    throw new Error("Gemini API Key is not configured. Please ensure GEMINI_API_KEY is provided in the environment.");
   }
   const selectedKey = lastFailedKey ? getFallbackApiKey(lastFailedKey) : getRandomApiKey();
   return {
@@ -74,6 +74,7 @@ export const isTextBlob = (blob: Blob, fileName?: string): boolean => {
 
 // User's strictly configured model list in exact order down to gemini-2.5-flash (excluding gemini-3.5-flash-lite)
 export const USER_CONFIGURED_MODELS = [
+  'gemini-3.1-pro-preview',
   'gemini-3.5-flash',
   'gemini-3.7-flash',
   'gemini-3-flash-preview',
@@ -90,7 +91,7 @@ export async function generateContentWithRetry(
   params: any,
   maxRetriesPerModel: number = 2
 ): Promise<GenerateContentResponse> {
-  const requestedModel = params.model || 'gemini-3.5-flash';
+  const requestedModel = params.model || 'gemini-3.1-pro-preview';
   const startModel = getValidModelName(requestedModel);
 
   // Build cascade queue starting from requested model down to gemini-2.5-flash, then wrapping around
@@ -268,9 +269,12 @@ const responseSchema = {
 };
 
 export const getValidModelName = (model?: string): string => {
-  if (!model) return 'gemini-3.5-flash';
+  if (!model) return 'gemini-3.1-pro-preview';
   const m = model.toLowerCase().trim();
   
+  if (m.includes('3.1-pro') || m === 'gemini-3.1-pro-preview' || m === 'gemini-3.1-pro') {
+    return 'gemini-3.1-pro-preview';
+  }
   if (m.includes('3.5-flash-lite') || m === 'gemini-3.5-flash-lite') {
     return 'gemini-3.5-flash-lite';
   }
@@ -283,17 +287,8 @@ export const getValidModelName = (model?: string): string => {
   if (m.includes('3.6') || m === 'gemini-3.6-flash') {
     return 'gemini-3.6-flash';
   }
-  if (m.includes('3.5-flash-lite') || m === 'gemini-3.5-flash-lite') {
-    return 'gemini-3.5-flash-lite';
-  }
-  if (m.includes('3.5') || m === 'gemini-3.5-flash') {
-    return 'gemini-3.5-flash';
-  }
   if (m.includes('3-flash') || m === 'gemini-3-flash-preview') {
     return 'gemini-3-flash-preview';
-  }
-  if (m.includes('3.1-pro') || m === 'gemini-3.1-pro-preview') {
-    return 'gemini-3.1-pro-preview';
   }
   if (m === 'gemini-2.5-flash' || m === 'gemini-2.5-pro' || m === 'gemini-2.0-flash' || m === 'gemini-2.0-flash-lite') {
     return m;
